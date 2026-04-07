@@ -3,12 +3,23 @@ name: Build Desktop Installers
 on:
   workflow_dispatch:
   push:
-    paths:
-      - 'desktop/**'
+    tags:
+      - 'v*'
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            build-cmd: npx electron-builder --mac
+            artifact-pattern: "*.dmg"
+            artifact-name: ketcher-macos
+          - os: windows-latest
+            build-cmd: npx electron-builder --win
+            artifact-pattern: "*.exe"
+            artifact-name: ketcher-windows
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -20,6 +31,8 @@ jobs:
             scripts
             package.json
             package-lock.json
+            LICENSE
+            NOTICE
             .eslintrc.json
             .prettierrc.js
             .stylelintrc.json
@@ -31,13 +44,10 @@ jobs:
           node-version: 20
           cache: 'npm'
 
-      - name: Install root dependencies
-        run: npm install --ignore-scripts
-
-      - name: Install workspace dependencies
+      - name: Install dependencies
         run: npm install
 
-      - name: Build Ketcher packages and example
+      - name: Build Ketcher
         run: npm run build
 
       - name: Install desktop dependencies
@@ -48,12 +58,45 @@ jobs:
         working-directory: desktop
         run: npx shx cp -r ../example/dist/standalone app
 
-      - name: Build Windows installer
+      - name: Build installer
         working-directory: desktop
-        run: npx electron-builder --win
+        run: ${{ matrix.build-cmd }}
 
-      - name: Upload Windows installer
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ketcher-windows-installer
-          path: desktop/dist/*.exe
+          name: ${{ matrix.artifact-name }}
+          path: desktop/dist/${{ matrix.artifact-pattern }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: find artifacts -type f
+
+      - name: Create or update release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Ketcher Desktop ${{ github.ref_name }}
+          body: |
+            Ketcher chemical structure editor as a native desktop application.
+
+            ## Downloads
+            - **macOS**: Universal binary DMG (Intel + Apple Silicon)
+            - **Windows**: 64-bit NSIS installer
+
+            Built with Electron 33. Runs in standalone mode (no backend required).
+
+            Licensed under Apache License 2.0. See LICENSE and NOTICE files included in the installers.
+          files: |
+            artifacts/ketcher-macos/*
+            artifacts/ketcher-windows/*
