@@ -1,0 +1,74 @@
+{
+  "name": "ketcher-desktop",
+  "version": "1.0.0",
+  "description": "Ketcher - Chemical Structure Editor (Desktop)",
+  "author": "EPAM Systems",
+  "license": "Apache-2.0",
+  "main": "main.js",
+  "scripts": {
+    "copy:app": "shx rm -rf app && shx cp -r ../example/dist/standalone app",
+    "build:mac": "npm run copy:app && electron-builder --mac",
+    "build:win": "npm run copy:app && electron-builder --win",
+    "build:all": "npm run copy:app && electron-builder --mac --win",
+    "dev": "electron ."
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "shx": "^0.3.3"
+  },
+  "build": {
+    "appId": "com.epam.ketcher",
+    "productName": "Ketcher",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "app/**/*"
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "icon": "icons/icon.png",
+      "category": "public.app-category.education"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "icons/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    }
+  }
+}

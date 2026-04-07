@@ -1,0 +1,42 @@
+name: Build Desktop Installers
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'desktop/**'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm install
+
+      - name: Build Ketcher packages and example
+        run: npm run build
+
+      - name: Install desktop dependencies
+        working-directory: desktop
+        run: npm install
+
+      - name: Copy standalone build
+        working-directory: desktop
+        run: npx shx cp -r ../example/dist/standalone app
+
+      - name: Build Windows installer
+        working-directory: desktop
+        run: npx electron-builder --win
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: ketcher-windows-installer
+          path: desktop/dist/*.exe
